@@ -50,16 +50,19 @@ def execute_query(connection, query):
 sense = SenseHat()
 sense.clear()
 
+# Read sensor limits from config file
+cfgFile = open("sensorConfig.txt", "r");
+tempLimit = int(cfgFile.readline().split()[1]);
+pressureLimit = int(cfgFile.readLine().split()[1]);
+humidityLimit = int(cfgFile.read().split()[1]);
+
 # Email variables
 port = 465  # For SSL
 smtp_server = "smtp.gmail.com"
 sender_email = "lffyptest@gmail.com"
 receiver_email = "lffyptest@gmail.com"
 password = "LF_fyp_test"
-message = """\
-Subject: Temperature
-
-Temperature on Raspberry Pi has exceeded a certain limit."""
+message = ""
 context = ssl.create_default_context()
 
 # Database variables
@@ -95,8 +98,34 @@ while True:
     current_time = "'" + current_time + "'"
 
     # If temperature exceeds hard coded limit of 40 an email is sent
-    if temp > 40:
-        print("Email sent")
+    if temp > tempLimit:
+        print("Temp exceeded limit, email sent")
+        message = """\
+        Subject: Temperature
+
+        Temperature on Raspberry Pi has exceeded a certain limit."""
+
+        with smtplib.SMTP_SSL(smtp_server, port, context=context) as server:
+            server.login(sender_email, password)
+            server.sendmail(sender_email, receiver_email, message)
+
+    if pressure > pressureLimit:
+        print("Pressure exceeded limit, email sent")
+        message = """\
+        Subject: Pressure
+
+        Pressure on Raspberry Pi has exceeded a certain limit."""
+
+        with smtplib.SMTP_SSL(smtp_server, port, context=context) as server:
+            server.login(sender_email, password)
+            server.sendmail(sender_email, receiver_email, message)
+
+    if humidity > humidityLimit:
+        print("Humidity exceeded limit, email sent")
+        message = """\
+        Subject: Humidity
+
+        Humidity on Raspberry Pi has exceeded a certain limit."""
 
         with smtplib.SMTP_SSL(smtp_server, port, context=context) as server:
             server.login(sender_email, password)
