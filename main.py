@@ -52,9 +52,15 @@ sense.clear()
 
 # Read sensor limits from config file
 cfgFile = open("sensorConfig.txt", "r");
-tempLimit = int(cfgFile.readline().split()[1]);
-pressureLimit = int(cfgFile.readLine().split()[1]);
-humidityLimit = int(cfgFile.read().split()[1]);
+
+firstLine = cfgFile.readline().split();
+tempLimit = float(firstLine[1]);
+secondLine = cfgFile.readline().split();
+pressureLimit = float(secondLine[1]);
+thirdLine = cfgFile.readline().split();
+humidityLimit = float(thirdLine[1]);
+
+cfgFile.close();
 
 # Email variables
 port = 465  # For SSL
