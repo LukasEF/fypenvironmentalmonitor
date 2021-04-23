@@ -51,16 +51,24 @@ sense = SenseHat()
 sense.clear()
 
 # Read sensor limits from config file
-cfgFile = open("sensorConfig.txt", "r");
+try:
+    cfgFile = open("sensorConfig.txt", "r");
 
-firstLine = cfgFile.readline().split();
-tempLimit = float(firstLine[1]);
-secondLine = cfgFile.readline().split();
-pressureLimit = float(secondLine[1]);
-thirdLine = cfgFile.readline().split();
-humidityLimit = float(thirdLine[1]);
+    firstLine = cfgFile.readline().split();
+    tempLimit = float(firstLine[1]);
+    secondLine = cfgFile.readline().split();
+    pressureLimit = float(secondLine[1]);
+    thirdLine = cfgFile.readline().split();
+    humidityLimit = float(thirdLine[1]);
 
-cfgFile.close();
+    cfgFile.close();
+    limitsSet = 1;
+except OSError:
+    print ("Could not open/read file:", cfgFile)
+    limitsSet = 0;
+    templimit = 0;
+    pressureLimit = 0;
+    humidityLimit = 0;
 
 # Email variables
 port = 465  # For SSL
@@ -104,7 +112,7 @@ while True:
     current_time = "'" + current_time + "'"
 
     # If temperature exceeds hard coded limit of 40 an email is sent
-    if temp > tempLimit:
+    if temp > tempLimit and limitsSet == 1:
         print("Temp exceeded limit, email sent")
         message = """\
         Subject: Temperature
@@ -115,7 +123,7 @@ while True:
             server.login(sender_email, password)
             server.sendmail(sender_email, receiver_email, message)
 
-    if pressure > pressureLimit:
+    if pressure > pressureLimit and limitsSet == 1:
         print("Pressure exceeded limit, email sent")
         message = """\
         Subject: Pressure
@@ -126,7 +134,7 @@ while True:
             server.login(sender_email, password)
             server.sendmail(sender_email, receiver_email, message)
 
-    if humidity > humidityLimit:
+    if humidity > humidityLimit and limitsSet == 1:
         print("Humidity exceeded limit, email sent")
         message = """\
         Subject: Humidity
