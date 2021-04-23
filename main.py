@@ -110,8 +110,7 @@ while True:
     now = datetime.datetime.now()
     current_time = now.strftime("%H:%M:%S")
     current_time = "'" + current_time + "'"
-
-    # If temperature exceeds hard coded limit of 40 an email is sent
+    
     if temp > tempLimit and limitsSet == 1:
         print("Temp exceeded limit, email sent")
         message = """\
