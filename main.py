@@ -1,3 +1,4 @@
+import numpy as np
 import datetime
 import mysql.connector
 import smtplib, ssl
@@ -7,6 +8,58 @@ from time import sleep
 
 
 # - FUNCTIONS - #
+
+def clamp(value, min_value, max_value):
+    """
+    Returns *value* clamped to the range *min_value* to *max_value* inclusive.
+    """
+    return min(max_value, max(min_value, value))
+
+def scale(value, from_min, from_max, to_min=0, to_max=8):
+    """
+    Returns *value*, which is expected to be in the range *from_min* to
+    *from_max* inclusive, scaled to the range *to_min* to *to_max* inclusive.
+    If *value* is not within the expected range, the result is not guaranteed
+    to be in the scaled range.
+    """
+    from_range = from_max - from_min
+    to_range = to_max - to_min
+    return (((value - from_min) / from_range) * to_range) + to_min
+
+def render_bar(screen, origin, width, height, color):
+    """
+    Fills a rectangle within *screen* based at *origin* (an ``(x, y)`` tuple),
+    *width* pixels wide and *height* pixels high. The rectangle will be filled
+    in *color*.
+    """
+    # Calculate the coordinates of the boundaries
+    x1, y1 = origin
+    x2 = x1 + width
+    y2 = y1 + height
+    # Invert the Y-coords so we're drawing bottom up
+    max_y, max_x = screen.shape[:2]
+    y1, y2 = max_y - y2, max_y - y1
+    # Draw the bar
+    screen[int(y1):int(y2), int(x1):int(x2), :] = color
+
+def display_readings(hat):
+    """
+    Display the temperature, pressure, and humidity readings of the HAT as red,
+    green, and blue bars on the screen respectively.
+    """
+    # Calculate the environment values in screen coordinates
+    temperature_range = (0, 40)
+    pressure_range = (950, 1050)
+    humidity_range = (0, 100)
+    temperature = scale(clamp(hat.temperature, *temperature_range), *temperature_range)
+    pressure = scale(clamp(hat.pressure, *pressure_range), *pressure_range)
+    humidity = scale(clamp(hat.humidity, *humidity_range), *humidity_range)
+    # Render the bars
+    screen = np.zeros((8, 8, 3), dtype=np.uint8)
+    render_bar(screen, (0, 0), 2, round(temperature), color=(255, 0, 0))
+    render_bar(screen, (3, 0), 2, round(pressure), color=(0, 255, 0))
+    render_bar(screen, (6, 0), 2, round(humidity), color=(0, 0, 255))
+    hat.set_pixels([pixel for row in screen for pixel in row])
 
 # Create connection to MySQL Server
 def create_server_connection(host_name, user_name, user_password, database):
@@ -22,7 +75,7 @@ def create_server_connection(host_name, user_name, user_password, database):
             )
             print("MySQL Database connection successful")
         except Error as err:
-            print(f"Error: '{err}'")
+            print(err)
 
     return connection
 
@@ -42,7 +95,7 @@ def execute_query(connection, query):
         connection.commit()
         print("Query successful")
     except Error as err:
-        print(f"Error: '{err}'")
+        print(err)
 
 
 # - VARIABLES - #
@@ -53,7 +106,7 @@ sense.clear()
 
 # Read sensor limits from config file
 try:
-    cfgFile = open("sensorConfig.txt", "r");
+    cfgFile = open("/home/pi/fypenvironmentalmonitor/sensorConfig.txt", "r");
 
     firstLine = cfgFile.readline().split();
     tempLimit = float(firstLine[1]);
@@ -144,7 +197,8 @@ while True:
         with smtplib.SMTP_SSL(smtp_server, port, context=context) as server:
             server.login(sender_email, password)
             server.sendmail(sender_email, receiver_email, message)
-
+            
+    display_readings(sense)
     query = build_query(date, current_time, tempStr, humidityStr, pressureStr)
     execute_query(connection, query)
     print("Sleeping for 10 seconds...")
